@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# audio_data2url.py 
+# Author: Scott H. Hawley
+# License: MIT
+# Date: Sep 2, 2024
+
+# Description: This script will convert base64 audio src data in a Jupyter notebook to URLs of the same audio
+# which is saved in a separate branch of the same GitHub repository. The script will save the audio files in a
+# directory named 'audio_files' and commit them to the 'audio-storage' branch. The script will then replace the
+# base64 data with the raw URL of the audio file in the notebook. The script can be run on a single notebook file
+# or a directory containing multiple notebook files.
 
 import json
 import re
@@ -9,7 +19,7 @@ import hashlib
 import subprocess
 
 # Function to save base64 audio data to a file
-def save_audio_file(base64_data, notebook_name, cell_index, hash_length=64):
+def save_audio_file(base64_data, notebook_name, cell_index, hash_length=16):
     # Decode the base64 data
     audio_data = base64.b64decode(base64_data)
     # Generate a unique hash for the audio data
@@ -58,14 +68,7 @@ def commit_and_push_audio_file(audio_filepath):
         # Get the current branch name
         current_branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, check=True).stdout.strip()
         
-        # Check if the branch exists
-        branch_exists = subprocess.run(["git", "rev-parse", "--verify", branch_name], capture_output=True, text=True).returncode == 0
-        if not branch_exists:
-            # Create the branch if it doesn't exist
-            subprocess.run(["git", "checkout", "-b", branch_name], check=True)
-        else:
-            # Checkout the branch if it exists
-            subprocess.run(["git", "checkout", branch_name], check=True)
+        assert current_branch == branch_name, f"Error: branch mismatch, current ({current_branch}) != target ({branch_name})"
         
         # Add the audio file to the git index
         subprocess.run(["git", "add", audio_filepath], check=True)
@@ -88,7 +91,7 @@ def commit_and_push_audio_file(audio_filepath):
 
 
 # Function to process a single notebook file
-def audio_src2url(input_filename, nondestructive=True):
+def audio_dataurl(input_filename, nondestructive=True):
 
 
     # Load the Jupyter Notebook file
@@ -157,7 +160,7 @@ def audio_src2url(input_filename, nondestructive=True):
 if __name__ == "__main__":
     # Check if the input filename(s) or directory is provided
     if len(sys.argv) < 2:
-        print("Usage: audio_src2url.py <input_filename.ipynb> [<input_filename2.ipynb> ...] or <directory>")
+        print("Usage: audio_data2url.py <input_filename.ipynb> [<input_filename2.ipynb> ...] or <directory>")
         sys.exit(1)
 
     # Process each argument
