@@ -8,8 +8,6 @@ import base64
 import hashlib
 import subprocess
 
-
-
 # Function to save base64 audio data to a file
 def save_audio_file(base64_data, notebook_name, cell_index, hash_length=64):
     # Decode the base64 data
@@ -91,11 +89,7 @@ def commit_and_push_audio_file(audio_filepath):
 
 # Function to process a single notebook file
 def audio_src2url(input_filename, nondestructive=True):
-    # Generate the output filename
-    if nondestructive:
-        output_filename = re.sub(r'\.ipynb$', '_out.ipynb', input_filename)
-    else:
-        output_filename = input_filename
+
 
     # Load the Jupyter Notebook file
     try:
@@ -147,11 +141,12 @@ def audio_src2url(input_filename, nondestructive=True):
     for cell_index, cell in enumerate(notebook['cells']):
         replace_audio_data(cell, cell_index)
 
-    # Save the modified notebook back to the file
+    # Generate the output version of the notebook
+    output_filename = re.sub(r'\.ipynb$', '_out.ipynb', input_filename) if nondestructive else input_filename
     with open(output_filename, 'w') as file:
         json.dump(notebook, file)
 
-    # Output the result
+    # status message about the result
     if matches_found:
         print(f"Matches found and replaced. Output saved to {output_filename}")
     else:
