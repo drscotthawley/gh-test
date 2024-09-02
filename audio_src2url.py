@@ -117,7 +117,7 @@ def audio_src2url(input_filename, nondestructive=True):
 
     # Save the modified notebook back to the file
     with open(output_filename, 'w') as file:
-        json.dump(notebook, file, indent=2)
+        json.dump(notebook, file)
 
     # Output the result
     if matches_found:
