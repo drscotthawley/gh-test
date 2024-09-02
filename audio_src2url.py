@@ -25,6 +25,33 @@ def save_audio_file(base64_data, notebook_name, cell_index, hash_length=64):
     return audio_filepath
 
 
+# Function to change to a specified branch and return the current branch name
+def change_branch(target_branch):
+    try:
+        # Get the current branch name
+        current_branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, check=True).stdout.strip()
+        
+        # Check if the target branch exists
+        branch_exists = subprocess.run(["git", "rev-parse", "--verify", target_branch], capture_output=True, text=True).returncode == 0
+        if not branch_exists:
+            # Create the branch if it doesn't exist
+            subprocess.run(["git", "checkout", "-b", target_branch], check=True)
+        else:
+            # Checkout the branch if it exists
+            subprocess.run(["git", "checkout", target_branch], check=True)
+        
+        return current_branch
+    except subprocess.CalledProcessError as e:
+        print(f"Error during Git operation: {e}")
+        return None
+
+# Function to restore the original branch
+def restore_branch(original_branch):
+    try:
+        subprocess.run(["git", "checkout", original_branch], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error during Git operation: {e}")
+
 
 # Function to commit and push the audio file to the 'audio-storage' branch
 def commit_and_push_audio_file(audio_filepath):
@@ -100,15 +127,20 @@ def audio_src2url(input_filename, nondestructive=True):
                             if matches:
                                 matches_found = True
                                 for match in matches:
-                                    # Save the audio file and get the file path
-                                    audio_filepath = save_audio_file(match, os.path.splitext(os.path.basename(input_filename))[0], cell_index)
-                                    # Commit and push the audio file to the 'audio-storage' branch
-                                    raw_url = commit_and_push_audio_file(audio_filepath)
-                                    if raw_url:
-                                        # Replace base64 data with raw URL
-                                        new_source = f'<source src="{raw_url}"'
-                                        value_str = value_str.replace(f'data:audio/wav;base64,{match}', raw_url)
-                                        print(f"Replacing base64 data with {new_source}")
+                                    # Change to the audio-storage branch before saving the audio file
+                                    current_branch = change_branch("audio-storage")
+                                    if current_branch:
+                                        # Save the audio file and get the file path
+                                        audio_filepath = save_audio_file(match, os.path.splitext(os.path.basename(input_filename))[0], cell_index)
+                                        # Commit and push the audio file to the 'audio-storage' branch
+                                        raw_url = commit_and_push_audio_file(audio_filepath)
+                                        if raw_url:
+                                            # Replace base64 data with raw URL
+                                            new_source = f'<source src="{raw_url}"'
+                                            value_str = value_str.replace(f'data:audio/wav;base64,{match}', raw_url)
+                                            print(f"Replacing base64 data with {new_source}")
+                                        # Restore the original branch
+                                        restore_branch(current_branch)
                             output['data'][key] = [value_str]
 
     # Traverse the notebook cells
