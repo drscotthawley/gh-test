@@ -10,6 +10,8 @@
 # base64 data with the raw URL of the audio file in the notebook. The script can be run on a single notebook file
 # or a directory containing multiple notebook files.
 
+# Currently it performs "nondestructive" alteration of the notebook, by adding "_out" to the notebook name. 
+
 import json
 import re
 import sys
@@ -36,6 +38,8 @@ def save_audio_file(base64_data, notebook_name, cell_index, hash_length=16):
 # Function to change to a specified branch and return the current branch name
 def change_branch(target_branch):
     try:
+        # stash changes to current directory before changing branches  
+        subprocess.run(["git","stash"], check=True)
         # Get the current branch name
         current_branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, check=True).stdout.strip()
         
@@ -57,6 +61,7 @@ def change_branch(target_branch):
 def restore_branch(original_branch):
     try:
         subprocess.run(["git", "checkout", original_branch], check=True)
+        subproress.run(["git","stash","pop"], check=True)  # restore changes to directory
     except subprocess.CalledProcessError as e:
         print(f"Error during Git operation: {e}")
 
@@ -91,7 +96,7 @@ def commit_and_push_audio_file(audio_filepath):
 
 
 # Function to process a single notebook file
-def audio_dataurl(input_filename, nondestructive=True):
+def audio_data2url(input_filename, nondestructive=True):
 
 
     # Load the Jupyter Notebook file
@@ -170,9 +175,9 @@ if __name__ == "__main__":
             for root, _, files in os.walk(arg):
                 for file in files:
                     if file.endswith('.ipynb'):
-                        audio_src2url(os.path.join(root, file))
+                        audio_data2url(os.path.join(root, file))
         elif os.path.isfile(arg) and arg.endswith('.ipynb'):
             # Process the individual .ipynb file
-            audio_src2url(arg)
+            audio_data2url(arg)
         else:
             print(f"Skipping invalid file or directory: {arg}")
